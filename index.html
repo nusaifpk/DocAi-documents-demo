@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -543,6 +543,31 @@ body{
 .doc-card.favorited{border-color:rgba(245,158,11,.35)}
 .doc-card .fav-star{position:absolute;top:6px;right:34px;z-index:3;color:#f59e0b;font-size:12px;display:none}
 .doc-card.favorited .fav-star{display:block}
+.member-fav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
+  margin-left: 6px;
+  outline: none;
+}
+.member-fav-btn:hover {
+  transform: scale(1.25);
+  filter: brightness(1.2);
+}
+.member-fav-btn svg {
+  width: 16px;
+  height: 16px;
+  transition: fill 0.2s ease, stroke 0.2s ease;
+}
+.member-fav-btn.favorited svg {
+  filter: drop-shadow(0 0 4px rgba(245,158,11,0.4));
+}
 .empty-state{
   text-align:center;padding:60px 24px;
   background:#0d1526;border:1px solid rgba(255,255,255,.06);
@@ -1136,9 +1161,9 @@ button{font-family:inherit}
   const CURRENT_USER = 'abdul';
 
   const USERS = {
-    abdul: { id:'abdul', name:'Abdul Azeez', initials:'AA', gradient:'linear-gradient(135deg,#6366f1,#8b5cf6)', lastUpload:'2 min ago', totalDocs:42 },
-    nizam: { id:'nizam', name:'Nizam Muhammed', initials:'NM', gradient:'linear-gradient(135deg,#f59e0b,#ef4444)', lastUpload:'15 min ago', totalDocs:18 },
-    sarah: { id:'sarah', name:'Sarah Johnson', initials:'SJ', gradient:'linear-gradient(135deg,#10b981,#059669)', lastUpload:'1 hr ago', totalDocs:31 }
+    abdul: { id:'abdul', name:'Abdul Azeez', initials:'AA', gradient:'linear-gradient(135deg,#6366f1,#8b5cf6)', lastUpload:'2 min ago', totalDocs:42, favorite:false },
+    nizam: { id:'nizam', name:'Nizam Muhammed', initials:'NM', gradient:'linear-gradient(135deg,#f59e0b,#ef4444)', lastUpload:'15 min ago', totalDocs:18, favorite:false },
+    sarah: { id:'sarah', name:'Sarah Johnson', initials:'SJ', gradient:'linear-gradient(135deg,#10b981,#059669)', lastUpload:'1 hr ago', totalDocs:31, favorite:false }
   };
 
   const CATEGORIES = [
@@ -1245,7 +1270,7 @@ button{font-family:inherit}
     let docs = DOCUMENTS.filter(d => !d.deleted);
     if(state.tab === 'my') docs = docs.filter(d => d.ownerId === CURRENT_USER);
     else if(state.tab === 'shared') docs = docs.filter(d => d.shared);
-    else if(state.tab === 'favorites') docs = docs.filter(d => d.favorite);
+    else if(state.tab === 'favorites') docs = docs.filter(d => d.favorite && USERS[d.ownerId].favorite);
 
     const q = getSearchQuery();
     if(q) docs = docs.filter(d => d.title.toLowerCase().includes(q) || d.tag.toLowerCase().includes(q) || USERS[d.ownerId].name.toLowerCase().includes(q));
@@ -1329,7 +1354,15 @@ button{font-family:inherit}
         <div class="staff-header" data-toggle="${ownerId}">
           <div class="staff-info">
             <div class="staff-avatar" style="background:${u.gradient}">${u.initials}</div>
-            <div><span class="staff-name">${u.name}</span><span class="staff-badge">${items.length} document${items.length!==1?'s':''}</span></div>
+            <div>
+              <span class="staff-name">${u.name}</span>
+              <button class="member-fav-btn${u.favorite ? ' favorited' : ''}" data-owner-id="${u.id}" title="${u.favorite ? 'Remove from Favorites' : 'Add to Favorites'}">
+                <svg viewBox="0 0 24 24" fill="${u.favorite ? '#f59e0b' : 'none'}" stroke="${u.favorite ? '#f59e0b' : '#64748b'}" stroke-width="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              </button>
+              <span class="staff-badge">${items.length} document${items.length!==1?'s':''}</span>
+            </div>
           </div>
           <div class="staff-meta">Last uploaded ${u.lastUpload}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
         </div>
@@ -1601,6 +1634,16 @@ button{font-family:inherit}
   };
 
   $('documents-container').onclick = e=>{
+    const memberFav = e.target.closest('.member-fav-btn');
+    if(memberFav){
+      e.stopPropagation();
+      const ownerId = memberFav.dataset.ownerId;
+      const u = USERS[ownerId];
+      u.favorite = !u.favorite;
+      toast(u.favorite ? `${u.name} added to favorites` : `${u.name} removed from favorites`, 'success');
+      renderDocuments();
+      return;
+    }
     const menu = e.target.closest('.doc-menu');
     if(menu){ e.stopPropagation(); openDocMenu(menu.dataset.id, menu); return; }
     const expand = e.target.closest('[data-expand]');
